@@ -174,6 +174,7 @@ class Container(BaseModel):
     linux_parameters: LinuxParameters | None = None
     log_configuration: LogConfiguration | None = None
     depends_on: list[ContainerDependency] = Field(default_factory=list)
+    stop_timeout: int | None = Field(None, ge=2, le=120)
 
     def as_aws_dict(self, environment: dict[str, str] | None = None) -> dict:
         """Convert to AWS container definition shape.
@@ -219,6 +220,8 @@ class Container(BaseModel):
             result['logConfiguration'] = self.log_configuration.as_aws_dict()
         if self.depends_on:
             result['dependsOn'] = [d.as_aws_dict() for d in self.depends_on]
+        if self.stop_timeout is not None:
+            result['stopTimeout'] = self.stop_timeout
 
         return result
 

@@ -217,12 +217,17 @@ class ApplicationUpdater:
             )
             return None
 
-        # Service role (classic EC2 + ELB)
-        current_role = details.get('roleArn')
-        # AWS returns the role as an ARN; ours may be a name or an ARN. Match
-        # by suffix to avoid spurious diffs.
-        if match.role_arn and current_role:
-            if not (
+        # Service role (classic EC2 + ELB). Only meaningful when there's a
+        # load balancer, and even then only when the caller explicitly set
+        # role_arn — AWS auto-attaches a service-linked role on Fargate /
+        # awsvpc services and surfaces it via `details['roleArn']` regardless
+        # of what the caller did. Comparing unconditionally would force a
+        # spurious re-create on every Fargate service without an explicit role.
+        if match.load_balancers and match.role_arn:
+            current_role = details.get('roleArn')
+            # AWS returns the role as an ARN; ours may be a name or an ARN.
+            # Match by suffix to avoid spurious diffs.
+            if not current_role or not (
                 current_role == match.role_arn
                 or current_role.endswith(f'/{match.role_arn}')
                 or match.role_arn.endswith(f'/{current_role}')
@@ -234,14 +239,6 @@ class ApplicationUpdater:
                     match.role_arn,
                 )
                 return None
-        elif (current_role is None) != (match.role_arn is None):
-            self._explain_recreate(
-                service_name,
-                'role',
-                current_role,
-                match.role_arn,
-            )
-            return None
 
         # Launch type / capacity provider strategy. Switching between these
         # two requires a re-create.

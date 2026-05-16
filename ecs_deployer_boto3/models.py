@@ -470,6 +470,12 @@ class Service(BaseModel):
     # Classic ELB-with-EC2 service role
     role_arn: str | None = None
 
+    # Forces a new deployment on update even when no service params changed.
+    # Defaults to True since this library is meant for CI: an update_application
+    # call should always roll the service. Also required by AWS when switching
+    # to/from a capacity provider strategy.
+    force_new_deployment: bool = True
+
     # Library-specific (not an AWS field). Tolerates this many ELB health-check
     # failures during deployment before bailing out. Useful for flaky checks.
     deploy_monitoring_health_check_failed_count: int | None = Field(
@@ -548,6 +554,8 @@ class Service(BaseModel):
         """Parameters for boto3 ``ecs.update_service``."""
         params = self._common_params()
         params['service'] = self.name
+        if self.force_new_deployment:
+            params['forceNewDeployment'] = True
         # Placement strategy / constraints and role can't be changed via
         # update_service — they force a re-create (see ApplicationUpdater).
         return params

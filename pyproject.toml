@@ -1,7 +1,7 @@
 [project]
 name = "ecs-deployer-boto3"
 # Changing the version automatically publishes to PyPI (see DEVELOPMENT.md)
-version = "0.2.0"
+version = "0.3.0"
 description = "Deploy applications to AWS ECS using boto3 and pydantic"
 readme = "README.md"
 license = "MIT"

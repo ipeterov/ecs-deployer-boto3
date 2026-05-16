@@ -30,12 +30,24 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
-      should-publish: ${{ steps.version.outputs.local_version_is_higher }}
+      should-publish: ${{ steps.first-publish.outputs.is_first_publish == 'true' || steps.version.outputs.local_version_is_higher }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if package exists on PyPI
+        id: first-publish
+        run: |
+          name=$(grep -m1 '^name' pyproject.toml | sed -E 's/name\s*=\s*"([^"]+)"/\1/')
+          status=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/${name}/json")
+          if [ "$status" = "404" ]; then
+            echo "is_first_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_first_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check if version needs publishing
         id: version
+        if: steps.first-publish.outputs.is_first_publish != 'true'
         uses: maybe-hello-world/pyproject-check-version@cbb988d0ddc5eb18f243b2fd088be84e0c42d053
         with:
           pyproject-path: pyproject.toml
